@@ -18,12 +18,11 @@ module KernelBuffer #(parameter
         D = (1<<depth), // size of Convolutional Unit
         W = 16
     )(
-        input wire [W*D-1:0] ip,
         output wire [W*D-1:0] op,
         input wire [A-1:0] address,
 
         input wire [W-1+depth+2 :0] ioInputs,
-        output wire [W-1:0] ioOutputs,
+        output wire [W-1:0] ioOutputs, // not needed?
         input wire CLK
     );
     wire ioSelect;
@@ -37,7 +36,6 @@ module KernelBuffer #(parameter
     assign ioSelect = ioInputs[W+depth+1];
 
     BufferMemory #(.depth(depth),.A(A),.W(W))  buffermemory(
-        .ip(ip),
         .op(op),
         .address(address),
         .ioSelect(ioSelect),

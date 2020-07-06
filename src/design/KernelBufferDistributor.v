@@ -18,9 +18,11 @@ module KernelBufferDistributor #(parameter
     )(
         input wire [W*D-1:0] ip,
         output wire [W*D-1:0]op,
-        input wire [depth-1:0] bankSelect,
-        input wire [depth-1:0] Trc
+        input wire [2*depth-1:0] controlSignal
     );
+
+    wire [depth-1:0] bankSelect, Trc;
+    assign {Trc, bankSelect} = controlSignal;
 
 //    wor [3:0] a = 0;
     wire [W-1:0] rowIn [D-1:0];
