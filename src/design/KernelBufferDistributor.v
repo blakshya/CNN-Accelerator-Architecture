@@ -42,8 +42,8 @@ module KernelBufferDistributor #(parameter
             localparam GROUPS = D/STEP;
             for (group = 0; group < GROUPS; group = group+1) begin
                 for (step = 1; step < STEP; step = step+1) begin
-                    assign rowOutputByTrc[i][group*STEP+step] = 
-                                             rowOutputByTrc[i][group*STEP];
+                    assign rowOutputByTrc[group*STEP+step][i] = 
+                                            rowOutputByTrc[group*STEP][i];
                 end
             end
         end
@@ -53,7 +53,8 @@ module KernelBufferDistributor #(parameter
             localparam GROUP_SIZE = i+1;
             localparam GROUPS = D/GROUP_SIZE;
             for (group = 0; group<GROUPS; group = group+1) begin
-                assign rowOutputByTrc[i][group*GROUP_SIZE] = rowIn[group*GROUP_SIZE+bankSelect];
+                assign rowOutputByTrc[group*GROUP_SIZE][i] = 
+                                            rowIn[group*GROUP_SIZE+bankSelect];
                 // add a check for bankSelect<Trc?
                 // assign rowOutputByTrc[i][group*GROUP_SIZE] = |(Trc-bankSelect) ?rowIn[group*GROUP_SIZE+bankSelect]:0;
             end
