@@ -22,7 +22,7 @@ module KernelBuffer #(parameter
         input wire [A-1:0] address,
 
         input wire [W-1+depth+2 :0] ioInputs,
-        output wire [W-1:0] ioOutputs, // not needed?
+        // output wire [W-1:0] ioOutputs, // not needed?
         input wire CLK
     );
     wire ioSelect;
@@ -45,4 +45,5 @@ module KernelBuffer #(parameter
         .ioOut(ioOutputs),
         .CLK(CLK)
     );
+    
 endmodule

@@ -10,7 +10,13 @@
  *  A = address length for the SRAM
  *  W = Data width
  *
- * 
+ * Ports
+ *  IO:
+ *      ioSelect - if io is enabled
+ *      ioWrite - if io write is enabled
+ *      ioBankSelect -  bank number selected for io
+ *      ioInput - W-bit input
+ *      ioOut - W-bit output
  */
 module BufferMemory #(parameter 
         depth = 2,
@@ -21,9 +27,9 @@ module BufferMemory #(parameter
         input wire [W*D-1:0] ip,
         output wire [W*D-1:0] op,
         input wire [A-1:0] address,
+        input wire write,
 
         input wire ioSelect,
-        input wire ioWrite,
         input wire [depth-1:0] ioBankSelect,
         input wire [W-1:0]  ioInput,
         output wire [W-1:0] ioOut,
@@ -39,12 +45,12 @@ module BufferMemory #(parameter
     genvar i,j;
     generate
         // one-hot-encoding for determining which bank is selected
-        assign bankWrite = ioSelect && ioWrite ? (1<<ioBankSelect):0;
+        assign bankWrite = ioSelect && write ? (1<<ioBankSelect):{D{write}};
         assign ioOut = outputs[ioBankSelect];
         for (i = 0; i<D; i=i+1) begin
             assign inputs[i]  = ip[W*(i+1)-1 -:W];
-            assign outputs[i] = op[W*(i+1)-1 -:W];
-            assign bankInput[i] = ioSelect && ioWrite ? ioInput: inputs[i];
+            assign op[W*(i+1)-1 -:W] = outputs[i];
+            assign bankInput[i] = ioSelect && write ? ioInput: inputs[i];
             assign outputs[i] = bankOutput[i];
             SRAM #(.W(W),.A(A)) bank (
                 .address(address),
