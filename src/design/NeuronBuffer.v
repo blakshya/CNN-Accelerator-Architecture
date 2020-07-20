@@ -41,7 +41,7 @@ module NeuronBuffer #(parameter
         .op(op),
         .address(address),
         .ioSelect(ioSelect),
-        .ioWrite(ioWrite),
+        .write(ioWrite),
         .ioBankSelect(ioBankSelect),
         .ioInput(ioInput),
         .ioOut(ioOutputs),
