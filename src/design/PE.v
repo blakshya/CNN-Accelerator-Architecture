@@ -7,11 +7,13 @@
 module PE #(parameter 
         depth = 2,
         A = 7,
-        CTR_IP = 1, // under consideration
+        CTR_IP = 8, // under consideration
         W = 16
     )(
         input wire [W-1:0] adderIn,
-        input wire [CTR_IP-1:0] controlSignal,
+        input wire [CTR_IP-1:0] controlSignal, // same across column
+        input wire [depth-1:0] initSettings, // same across row
+        input wire [2*depth+2*A-1:0] peConfig,// same for all PEs
         output wire [W-1:0] adderOut,
         input wire [W-1:0] kernelIn,
         input wire [W-1:0] neuronIn,
@@ -26,6 +28,8 @@ module PE #(parameter
 
     LocalStoreController #(.W(W),.A(A),.depth(depth),.CTR_IP(CTR_IP)) localStoreController(
         .controlSignal(controlSignal),
+        .initSettings(initSettings),
+        .peConfig(peConfig),
         .kernelAddress(kernelAddress),
         .kernelWrite(kernelWrite),
         .neuronAddress(neuronAddress),
@@ -52,7 +56,7 @@ module PE #(parameter
     NBitAdder #(.N(W)) adder(
         .ip1(adderIn),
         .ip2(multResult),
-        .op(addResult)
+        .op(adderOut)
     );
 
     NBitMultiplier #(.N(W)) multiplier(

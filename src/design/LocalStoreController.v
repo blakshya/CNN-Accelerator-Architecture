@@ -83,7 +83,7 @@ parameter SET_N_COL_OFST = 3'b111 ;
 
     assign kernelAddress = (row+rowOffset)*kernelStep+col+columnOffset;
 
-    always @(posedge CLK) begin
+    always @(negedge CLK) begin
         case (control)
             INIT    : begin
                     row = 0;
@@ -96,9 +96,9 @@ parameter SET_N_COL_OFST = 3'b111 ;
             INCR    : begin
                     // row = row;
                     if (write) begin
-                        col = col+1;
+                        col = col + 1;
                     end else begin
-                        col = col +Tc;
+                        col = col + Tc;
                     end
                 end
             JUMP    : begin
@@ -144,9 +144,9 @@ parameter SET_N_COL_OFST = 3'b111 ;
     reg [A-1:0] row, col;
     reg [depth-1:0] rowOffset, columnOffset;
 
-    assign neuronAddress = (row*rowOffset)*nStep+col+columnOffset;
+    assign neuronAddress = (row+rowOffset)*nStep+col+columnOffset;
 
-    always @(posedge CLK) begin
+    always @(negedge CLK) begin
         case (control)
             INIT    : begin
                     row = 0;
