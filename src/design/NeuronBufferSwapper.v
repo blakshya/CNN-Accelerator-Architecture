@@ -38,7 +38,7 @@ module NeuronBufferSwapper #(parameter
     );
 
      assign {n1Address,n2Address} = readBufferSelect?{writeBuffAddress,readBuffAddress}
-                                     :{readBufferSelect,writeBuffAddress};
+                                     :{readBuffAddress,writeBuffAddress};
      assign {nReadIO_Out} = readBufferSelect?n2IO_Out:n1IO_Out;
      assign {toConvUnitNBuffIn,toConvUnitPartialSum} = readBufferSelect?{fromN2,fromN1}:{fromN1,fromN2};
 
