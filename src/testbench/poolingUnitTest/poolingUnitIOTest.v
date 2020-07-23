@@ -3,7 +3,7 @@
 module poolingUnitIOTest ();
 parameter depth = 4;
 parameter D = 1<<depth;
-parameter W = depth;
+parameter W = depth+1;
 
 reg CLK;
 always begin #1;CLK=!CLK; end
