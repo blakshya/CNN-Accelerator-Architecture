@@ -25,11 +25,11 @@ module NeuronBufferSwapper #(parameter
         output wire[A-1:0] n1Address,
         output wire[A-1:0] n2Address,
 
-        input wire [W-1:0] nReadIO_In,
+        input wire [W-1+depth+2 :0] nReadIO_In,
         output wire [W-1:0] nReadIO_Out,
-        output wire [W-1:0] n1IO_In,
+        output wire [W-1+depth+2 :0] n1IO_In,
         input wire [W-1:0] n1IO_Out,
-        output wire [W-1:0] n2IO_In,
+        output wire [W-1+depth+2 :0] n2IO_In,
         input wire [W-1:0] n2IO_Out,
 
         input wire [W*D-1:0] fromPoolUnitOut,
