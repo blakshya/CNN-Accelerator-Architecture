@@ -7,13 +7,12 @@
 module PE #(parameter 
         depth = 2,
         A = 7,
-        CTR_IP = 8, // under consideration
         W = 16
     )(
         input wire [W-1:0] adderIn,
-        input wire [CTR_IP-1:0] controlSignal, // same across column
-        input wire [depth-1:0] initSettings, // same across row
-        input wire [2*depth+2*A-1:0] peConfig,// same for all PEs
+        input wire [7:0] columnControl, // same across column
+        input wire [depth-1:0] rowControl, // same across row
+        input wire [2*depth+2*A-1:0] commonControl, // same for all PEs
         output wire [W-1:0] adderOut,
         input wire [W-1:0] kernelIn,
         input wire [W-1:0] neuronIn,
@@ -21,19 +20,22 @@ module PE #(parameter
     );
 
     wire kernelWrite, neuronWrite;
+    wire [5:0] controlSignal;
+        assign {controlSignal,kernelWrite,neuronWrite} = columnControl;
+    wire [depth-1:0] initSettings;
+        assign {initSettings} = rowControl;
+
     wire [A-1:0] kernelAddress, neuronAddress;
     wire [W-1:0] kOut, nOut;
 
     wire [W-1:0] multResult;
 
-    LocalStoreController #(.W(W),.A(A),.depth(depth),.CTR_IP(CTR_IP)) localStoreController(
+    LocalStoreController #(.W(W),.A(A),.depth(depth)) localStoreController(
         .controlSignal(controlSignal),
         .initSettings(initSettings),
-        .peConfig(peConfig),
+        .peConfig(commonControl),
         .kernelAddress(kernelAddress),
-        .kernelWrite(kernelWrite),
         .neuronAddress(neuronAddress),
-        .neuronWrite(neuronWrite),
         .CLK(CLK)
     );
 

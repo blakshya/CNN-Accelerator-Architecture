@@ -15,31 +15,41 @@ module Accelerator #(parameter
 
     wire [2*depth-1:0] kernelDistControl;
     wire [ABuffer-1:0] kernelBuffAddress;
-    wire [1:0] kerbelBuffIO;
+    wire [W-1+depth+2 :0] kerbelBuffIO;
 
     wire [ABuffer-1:0] nReadAddress, nWriteAddress;
-    wire [W-1:0] nReadIO_In, nReadIO_Out;
+    wire [W-1:0] nReadIO_Out;
+    wire [W-1+depth+2 :0] nReadIO_In;
 
-    wire [1:0] convUnitControl;
-    wire [1:0] poolUnitControl;
+    wire [D*8-1:0] convUnitColumnControl;
+    wire [(depth)*D-1:0] convUnitRowControl;
+    wire [2*depth+2*ALocal-1:0] convUnitCommonControl;
 
-    MasterController #(.W(W),.depth(depth),.ABuffer(ABuffer)) controller(
+    wire doPooling;
+    wire [D*4-1:0] poolUnitControl;
+
+    MasterController #(.W(W),.depth(depth),.Ab(ABuffer),.Al(ALocal)) controller(
+        // Interface
         .dataIn(dataIn),
         .dataOut(dataOut),
         .instruction(instruction),
-
+        // Kernel Buffer
         .kBuffIn(kerbelBuffIO),
         .kBuffAddress(kernelBuffAddress),
         .kernelDistControl(kernelDistControl),
-
+        // Neuron Buffer
         .nReadAddress(nReadAddress),
         .nWriteAddress(nWriteAddress),
 
         .nReadIO_In(nReadIO_In), // here output
         .nReadIO_Out(nReadIO_Out),// here input
-
-        .convUnitControl(convUnitControl),
-        .poolUnitControl(poolUnitControl)
+        // Conv Unit
+        .convUnitColumnControl(convUnitColumnControl),
+        .convUnitRowControl(convUnitRowControl),
+        .convUnitCommonControl(convUnitCommonControl),
+        // Pooling Unit
+        .poolUnitControl(poolUnitControl),
+        .doPooling(doPooling)
     );
 
     wire [ABuffer-1:0] n1Address, n2Address;
@@ -49,7 +59,8 @@ module Accelerator #(parameter
     wire [W*D-1:0] convUnitPartialSumIn;
     wire [W*D-1:0] convUnitNBuffIn;
 
-    wire [W-1:0] n1IO_In, n1IO_Out, n2IO_In, n2IO_Out;
+    wire [W-1:0] n1IO_Out, n2IO_Out;
+    wire [W-1+depth+2 :0] n1IO_In, n2IO_In;
 
     NeuronBufferSwapper #(.depth(depth),.A(ABuffer),.W(W)) nSwapper(
         .fromN1(n1Out),
@@ -115,11 +126,14 @@ module Accelerator #(parameter
         .partialSumOut(convUnitOut),
         .kBuffIn(kernelInputForConvUnit),
         .nBuffIn(convUnitNBuffIn),
-        .controlSignal(convUnitControl),
+        .columnControl(convUnitColumnControl),
+        .rowControl(convUnitRowControl),
+        .commonControl(convUnitCommonControl),
         .CLK(CLK)
     );
 
     PoolingUnit #(.depth(depth),.W(W)) poolingUnit(
+        .doPooling(doPooling),
         .ip(convUnitOut),
         .op(poolUnitOut),
         .control(poolUnitControl),

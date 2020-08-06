@@ -10,27 +10,23 @@
 module LocalStoreController #(parameter 
         depth = 2,
         A = 7,
-        CTR_IP = 6+2, //under consideration
         D = (1<<depth),
         W = 16
     )(
-        input wire [CTR_IP-1:0] controlSignal,
+        input wire [5:0] controlSignal,
         input wire [2*depth+2*A-1:0] peConfig,
         input wire [depth-1:0] initSettings,
         output wire [A-1:0] kernelAddress,
         output wire [A-1:0] neuronAddress,
-        output wire kernelWrite,
-        output wire neuronWrite,
         input wire CLK
     );
 
     wire [2*depth+A-1:0] kernelConfig;
     wire [A-1:0] neuronConfig;
-    assign {kernelConfig, neuronConfig} = peConfig;
+        assign {kernelConfig, neuronConfig} = peConfig;
 
-    // wire [2*depth-1:0] kernelConfig;
     wire [2:0] kernelControl, neuronControl;
-        assign {kernelControl, kernelWrite, neuronControl, neuronWrite} = controlSignal;
+        assign {kernelControl, neuronControl} = controlSignal;
     
     kernelFSM #(.depth(depth),.A(A)) kernelStoreController(
         .control(kernelControl),
