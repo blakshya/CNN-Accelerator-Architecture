@@ -153,10 +153,10 @@ for nRow in range(neuronRows):
     kctrl,nctrl = INIT, JUMP
 
 
-print (ins)
+# print (ins)
 
-filename = 'convolutionInstructions'
-with open(filename+'.txt','w') as f:
-        for i in ins:
-            f.write('%s\n'%i)
+# filename = 'convolutionInstructions'
+# with open(filename+'.txt','w') as f:
+#         for i in ins:
+#             f.write('%s\n'%i)
 

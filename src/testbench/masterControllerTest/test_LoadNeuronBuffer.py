@@ -50,23 +50,27 @@ bankedFM = np.zeros(bankedFMShape, dtype='int')
 # Instructions for Loading to Neuron Buffer
 #-----------------------------------------------------------------------------
 
-# INIT = 0
-# INCR = 1
-# HOLD = 2
-# JUMP = 3
+INIT = 0
+INCR = 1
+HOLD = 2
+JUMP = 3
 
-INIT = 'INIT'
-INCR = 'INCR'
-HOLD = 'HOLD'
-JUMP = 'JUMP'
+# INIT = 'INIT'
+# INCR = 'INCR'
+# HOLD = 'HOLD'
+# JUMP = 'JUMP'
 
 nCtrl = INIT
+bankSelIns = INIT
 ins = []
 for bankSelect in range(D):
     for data in bankedFM[bankSelect,:]:
-        # ins += ['{:03b}{:016b}'.format(nCtrl,data)]
-        ins += ['{}{:016b}'.format(nCtrl,data)]
+        ins += ['{:03b}{:03b}{:016b}'.format(nCtrl,bankSelIns,data)]
+        # ins += ['{} {} {:016b}'.format(nCtrl,bankSelIns,data)]
+        # ins += ['{}{:016b}'.format(nCtrl,data)]
         print(ins[-1])
         nCtrl = INCR
+        bankSelIns = HOLD
     nCtrl = JUMP
+    bankSelIns = INCR
 

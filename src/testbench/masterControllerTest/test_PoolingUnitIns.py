@@ -111,5 +111,6 @@ for nRow in range(int(np.ceil(So/(P*tc)))):
 filename = 'poolingInstructions'
 with open(filename+'.txt','w') as f:
         for i in ins:
+            print(i)
             i = ''.join(i)
             f.write('%s\n'%i)

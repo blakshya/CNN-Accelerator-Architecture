@@ -46,23 +46,26 @@ bankedKernel = np.zeros(bankedKernelShape,dtype='int')
 # Instructions for Loading Kernel Buffer
 #-----------------------------------------------------------------------------
 
-# INIT = 0
-# INCR = 1
-# HOLD = 2
-# JUMP = 3
+INIT = 0
+INCR = 1
+HOLD = 2
+JUMP = 3
 
-INIT = 'INIT'
-INCR = 'INCR'
-HOLD = 'HOLD'
-JUMP = 'JUMP'
+# INIT = 'INIT'
+# INCR = 'INCR'
+# HOLD = 'HOLD'
+# JUMP = 'JUMP'
 
 kCtrl = INIT
+bankSelIns = INIT
 ins = []
 for bankSelect in range(D):
     for data in bankedKernel[bankSelect,:]:
-        # ins += ['{:03b}{0:016b}'.format(kCtrl,data)]
-        ins += ['{}{0:016b}'.format(kCtrl,data)]
-        # print(ins[-1],bankSelect, data, kCtrl)
+        ins += ['{:03b}{:02b}{:016b}'.format(kCtrl,bankSelIns,data)]
+        # ins += ['{} {} {:016b}'.format(kCtrl,bankSelIns,data)]
+        print(ins[-1])
         kCtrl = INCR    # col ++
+        bankSelIns = HOLD
     kCtrl = JUMP        # bank sel ++. col =0
+    bankSelIns = INCR
 

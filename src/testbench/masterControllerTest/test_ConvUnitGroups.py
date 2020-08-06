@@ -95,7 +95,7 @@ def getNeuronOffsetInstructions(D,ti,tj,tr,tc,tn,tm):
 
 ins = []
 
-# ins += getKernelOffsetInstructions(D,ti,tj,tn)
+ins += getKernelOffsetInstructions(D,ti,tj,tn)
 ins += getNeuronOffsetInstructions(D,ti,tj,tr,tc,tn,tm)
 
 
