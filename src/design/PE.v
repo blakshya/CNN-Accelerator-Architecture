@@ -10,8 +10,8 @@ module PE #(parameter
         W = 16
     )(
         input wire [W-1:0] adderIn,
-        input wire [6:0] columnControl, // same across column
-        input wire [depth:0] rowControl, // same across row
+        input wire [7:0] columnControl, // same across column
+        input wire [depth-1:0] rowControl, // same across row
         input wire [2*depth+2*A-1:0] commonControl, // same for all PEs
         output wire [W-1:0] adderOut,
         input wire [W-1:0] kernelIn,
@@ -21,9 +21,9 @@ module PE #(parameter
 
     wire kernelWrite, neuronWrite;
     wire [5:0] controlSignal;
-        assign {controlSignal,kernelWrite} = columnControl;
+        assign {controlSignal,kernelWrite,neuronWrite} = columnControl;
     wire [depth-1:0] initSettings;
-        assign {initSettings,neuronWrite} = rowControl;
+        assign {initSettings} = rowControl;
 
     wire [A-1:0] kernelAddress, neuronAddress;
     wire [W-1:0] kOut, nOut;

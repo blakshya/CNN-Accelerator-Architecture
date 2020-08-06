@@ -21,8 +21,8 @@ module Accelerator #(parameter
     wire [W-1:0] nReadIO_Out;
     wire [W-1+depth+2 :0] nReadIO_In;
 
-    wire [D*7-1:0] convUnitColumnControl;
-    wire [(depth+1)*D-1:0] convUnitRowControl;
+    wire [D*8-1:0] convUnitColumnControl;
+    wire [(depth)*D-1:0] convUnitRowControl;
     wire [2*depth+2*ALocal-1:0] convUnitCommonControl;
 
     wire doPooling;
