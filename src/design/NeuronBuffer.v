@@ -20,28 +20,25 @@ module NeuronBuffer #(parameter
     )(
         input wire [W*D-1:0] ip,
         output wire [W*D-1:0] op,
+        input wire write,
         input wire [A-1:0] address,
 
-        input wire [W-1+depth+2 :0] ioInputs,
+        input wire [W-1+depth+1 :0] ioInputs,
         output wire [W-1:0] ioOutputs,
         input wire CLK
     );
+    
     wire ioSelect;
-    wire ioWrite;
     wire [depth-1:0] ioBankSelect;
     wire [W-1:0] ioInput;
-
-    assign ioInput = ioInputs[W-1:0];//W
-    assign ioBankSelect = ioInputs[W+depth-1 -:depth];
-    assign ioWrite = ioInputs[W+depth];
-    assign ioSelect = ioInputs[W+depth+1];
+        assign {ioInput,ioBankSelect,ioSelect} = ioInputs;
 
     BufferMemory #(.depth(depth),.A(A),.W(W))  buffermemory(
         .ip(ip),
         .op(op),
         .address(address),
         .ioSelect(ioSelect),
-        .write(ioWrite),
+        .write(write),
         .ioBankSelect(ioBankSelect),
         .ioInput(ioInput),
         .ioOut(ioOutputs),
