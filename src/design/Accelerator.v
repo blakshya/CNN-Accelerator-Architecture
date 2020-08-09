@@ -5,10 +5,13 @@ module Accelerator #(parameter
         D = (1<<depth),
         ABuffer = 11,
         ALocal = 7,
-        W = 16
+        W = 16,
+        insW = (2 > depth)? 2: depth,
+        insD = (D > W)? D:W,
+        insWidth = 4+2+2*insW+insD
     )(
-        input wire [W-1:0]  dataIn,
-        input wire [1:0] instruction,
+        // input wire [W-1:0]  dataIn,
+        input wire [insWidth-1:0] instruction,
         output wire[W-1:0] dataOut,
         input wire CLK
     );
@@ -19,18 +22,18 @@ module Accelerator #(parameter
 
     wire [ABuffer-1:0] nReadAddress, nWriteAddress;
     wire [W-1:0] nReadIO_Out;
-    wire [W-1+depth+2 :0] nReadIO_In;
+    wire [W-1+depth+1 :0] nReadIO_In;
 
     wire [D*8-1:0] convUnitColumnControl;
-    wire [(depth)*D-1:0] convUnitRowControl;
-    wire [2*depth+2*ALocal-1:0] convUnitCommonControl;
+    wire [D-1:0] convUnitRowControl;
+    wire [3*depth+2*ALocal-1:0] convUnitCommonControl;
 
-    wire doPooling;
+    wire doPooling,readBufferSelect,nRWrite,nWWrite;
     wire [D*4-1:0] poolUnitControl;
 
     MasterController #(.W(W),.depth(depth),.Ab(ABuffer),.Al(ALocal)) controller(
         // Interface
-        .dataIn(dataIn),
+        // .dataIn(dataIn),
         .dataOut(dataOut),
         .instruction(instruction),
         // Kernel Buffer
@@ -40,6 +43,8 @@ module Accelerator #(parameter
         // Neuron Buffer
         .nReadAddress(nReadAddress),
         .nWriteAddress(nWriteAddress),
+        .nRWrite(nRWrite),
+        .nWWrite(nWWrite),
 
         .nReadIO_In(nReadIO_In), // here output
         .nReadIO_Out(nReadIO_Out),// here input
@@ -60,9 +65,12 @@ module Accelerator #(parameter
     wire [W*D-1:0] convUnitNBuffIn;
 
     wire [W-1:0] n1IO_Out, n2IO_Out;
-    wire [W-1+depth+2 :0] n1IO_In, n2IO_In;
+    wire [W-1+depth+1 :0] n1IO_In, n2IO_In;
+
+    wire n1Write, n2Write;
 
     NeuronBufferSwapper #(.depth(depth),.A(ABuffer),.W(W)) nSwapper(
+        .readBufferSelect(readBufferSelect),
         .fromN1(n1Out),
         .fromN2(n2Out),
         .toN1In(n1In),
@@ -73,6 +81,11 @@ module Accelerator #(parameter
         .n1Address(n1Address),
         .n2Address(n2Address),
 
+        .nRWrite(nRWrite),
+        .nWWrite(nWWrite),
+        .n1Write(n1Write),
+        .n2Write(n2Write),
+
         .nReadIO_In(nReadIO_In),// here input
         .nReadIO_Out(nReadIO_Out),// here output
         .n1IO_In(n1IO_In),// here out
@@ -82,13 +95,15 @@ module Accelerator #(parameter
 
         .fromPoolUnitOut(poolUnitOut),
         .toConvUnitNBuffIn(convUnitNBuffIn),
-        .toConvUnitPartialSum(convUnitPartialSumIn)
+        .toConvUnitPartialSum(convUnitPartialSumIn),
+        .doPooling(doPooling)
     );
 
     NeuronBuffer #(.depth(depth),.A(ABuffer),.W(W)) neuronBuffer1(
         .ip(n1In),
         .op(n1Out),
         .address(n1Address),
+        .write(n1Write),
         .ioInputs(n1IO_In),
         .ioOutputs(n1IO_Out),
         .CLK(CLK)
@@ -98,6 +113,7 @@ module Accelerator #(parameter
         .ip(n2In),
         .op(n2Out),
         .address(n2Address),
+        .write(n2Write),
         .ioInputs(n2IO_In),
         .ioOutputs(n2IO_Out),
         .CLK(CLK)
