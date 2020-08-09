@@ -15,6 +15,7 @@ module LocalStoreController #(parameter
     )(
         input wire [5:0] controlSignal,
         input wire [2*depth+2*A-1:0] peConfig,
+        input wire initPESelect,
         input wire [depth-1:0] initSettings,
         output wire [A-1:0] kernelAddress,
         output wire [A-1:0] neuronAddress,
@@ -30,6 +31,7 @@ module LocalStoreController #(parameter
     
     kernelFSM #(.depth(depth),.A(A)) kernelStoreController(
         .control(kernelControl),
+        .initPESelect(initPESelect),
         .kernelConfig(kernelConfig),
         .kernelAddress(kernelAddress),
         .write(kernelWrite),
@@ -39,6 +41,7 @@ module LocalStoreController #(parameter
 
     neuronFSM #(.depth(depth),.A(A)) neuronStoreController(
         .control(neuronControl),
+        .initPESelect(initPESelect),
         .neuronConfig(neuronConfig),
         .neuronAddress(neuronAddress),
         .setInput(initSettings),
@@ -54,6 +57,7 @@ module kernelFSM #(parameter
         A = 7
     )(
         input wire [2:0] control,
+        input wire initPESelect,
         input wire [depth*2+A-1:0] kernelConfig,
         input wire [depth-1:0] setInput,
         input wire write,
@@ -102,15 +106,15 @@ parameter SET_N_COL_OFST = 3'b111 ;
                     col = 0;
                 end
             SET_K_ROW_OFST  : begin
-                    rowOffset = setInput;
+                    if (initPESelect) begin
+                        rowOffset = setInput;                        
+                    end
                 end
             SET_K_COL_OFST  : begin
-                    columnOffset =setInput;
+                    if (initPESelect) begin
+                        columnOffset =setInput;                        
+                    end
                 end
-            default : begin // HOLD
-                // row = row;
-                col = col;
-            end
         endcase
     end
 endmodule
@@ -120,6 +124,7 @@ module neuronFSM #( parameter
         A = 7
     )(
         input wire [2:0] control,
+        input wire initPESelect,
         input wire [A-1:0] neuronConfig,
         input wire [depth-1:0] setInput,
         output wire[A-1:0] neuronAddress,
@@ -161,15 +166,15 @@ parameter SET_N_COL_OFST = 3'b111 ;
                     col = 0;
                 end
             SET_N_ROW_OFST  : begin
-                    rowOffset = setInput;
+                    if (initPESelect) begin
+                       rowOffset = setInput; 
+                    end
                 end
             SET_N_COL_OFST  : begin
-                    columnOffset = setInput;
+                    if (initPESelect) begin
+                        columnOffset = setInput;                        
+                    end
                 end
-            default : begin //HOLD
-                // row = row;
-                col = col;
-            end
         endcase
     end
 

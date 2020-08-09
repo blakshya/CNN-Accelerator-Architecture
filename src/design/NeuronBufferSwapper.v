@@ -14,6 +14,7 @@ module NeuronBufferSwapper #(parameter
         W = 16
     )(
         input wire readBufferSelect,
+        input wire doPooling,
 
         input wire [W*D-1:0] fromN1,
         input wire [W*D-1:0] fromN2,
@@ -25,11 +26,16 @@ module NeuronBufferSwapper #(parameter
         output wire[A-1:0] n1Address,
         output wire[A-1:0] n2Address,
 
-        input wire [W-1+depth+2 :0] nReadIO_In,
+        input wire  nRWrite,
+        input wire  nWWrite,
+        output wire n1Write,
+        output wire n2Write,
+
+        input wire [W-1+depth+1 :0] nReadIO_In,
         output wire [W-1:0] nReadIO_Out,
-        output wire [W-1+depth+2 :0] n1IO_In,
+        output wire [W-1+depth+1 :0] n1IO_In,
         input wire [W-1:0] n1IO_Out,
-        output wire [W-1+depth+2 :0] n2IO_In,
+        output wire [W-1+depth+1 :0] n2IO_In,
         input wire [W-1:0] n2IO_Out,
 
         input wire [W*D-1:0] fromPoolUnitOut,
@@ -37,15 +43,20 @@ module NeuronBufferSwapper #(parameter
         output wire[W*D-1:0] toConvUnitPartialSum
     );
 
-     assign {n1Address,n2Address} = readBufferSelect?{writeBuffAddress,readBuffAddress}
-                                     :{readBuffAddress,writeBuffAddress};
-     assign {nReadIO_Out} = readBufferSelect?n2IO_Out:n1IO_Out;
-     assign {toConvUnitNBuffIn,toConvUnitPartialSum} = readBufferSelect?{fromN2,fromN1}:{fromN1,fromN2};
+    assign {n1Address,n2Address} = readBufferSelect?
+                                        {writeBuffAddress,readBuffAddress}
+                                        :{readBuffAddress,writeBuffAddress};
+    assign {n1Write,n2Write} = readBufferSelect?
+                                    {nWWrite,nRWrite}:{nRWrite,nWWrite};
+    assign {nReadIO_Out} = readBufferSelect?n2IO_Out:n1IO_Out;
+    assign {toConvUnitNBuffIn,toConvUnitPartialSum} 
+                = doPooling?(readBufferSelect?{fromN2,fromN2}:{fromN1,fromN1})
+                    :(readBufferSelect?{fromN2,fromN1}:{fromN1,fromN2});
 
-     assign n1IO_In = readBufferSelect?{(W){1'b0}}:nReadIO_In;
-     assign n2IO_In = readBufferSelect?nReadIO_In:{(W){1'b0}};
+    assign n1IO_In = readBufferSelect?{(W){1'b0}}:nReadIO_In;
+    assign n2IO_In = readBufferSelect?nReadIO_In:{(W){1'b0}};
      
-     assign toN1In = readBufferSelect?fromPoolUnitOut:0;
-     assign toN2In = readBufferSelect?0:fromPoolUnitOut;
+    assign toN1In = readBufferSelect?fromPoolUnitOut:0;
+    assign toN2In = readBufferSelect?0:fromPoolUnitOut;
 
 endmodule
