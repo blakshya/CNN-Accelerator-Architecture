@@ -17,8 +17,8 @@ module ConvolutionalUnit #(parameter
         input wire [W*D-1:0] nBuffIn,
 
         input wire [D*8-1:0] columnControl, // controlSignal
-        input wire [(depth)*D-1:0] rowControl, // initSettings
-        input wire [2*depth+2*A-1:0] commonControl, //  peConfig
+        input wire [D-1:0] rowControl, // initSettings
+        input wire [3*depth+2*A-1:0] commonControl, //  peConfig
         input wire CLK
     );
 
@@ -36,7 +36,7 @@ module ConvolutionalUnit #(parameter
             assign partialSumOut[W*(i+1)-1 -:W] = adderConnections[i][D];
             assign columnControlSignal[i] = columnControl[8*(i+1)-1 -:8];
             assign kernelBufferRow[i] = kBuffIn[W*(i+1)-1 -:W];
-            assign rowControlSignal[i] = rowControl[(depth)*(i+1)-1 -:depth];
+            assign rowControlSignal[i] = rowControl[i];
             assign neuronBufferColumn[i] = nBuffIn[W*(i+1)-1 -:W];
         end
         // PE mesh
