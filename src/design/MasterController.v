@@ -20,9 +20,10 @@ module MasterController #(parameter
         output wire [Ab-1:0] kBuffAddress,
         output wire [2*depth-1:0] kernelDistControl,
 
+        output reg readBufferSelect,
         output wire [Ab-1:0] nReadAddress,
-        output wire nRWrite,
         output wire [Ab-1:0] nWriteAddress,
+        output wire nRWrite,
         output wire nWWrite,
 
         output wire [W-1+depth+1 :0] nReadIO_In,
@@ -38,6 +39,10 @@ module MasterController #(parameter
         input wire CLK
     );
 
+    initial begin
+        readBufferSelect = 0;
+    end
+
      genvar i;
 //-----------------------------------------------------------------------------
 // Instruction opcodes
@@ -46,6 +51,7 @@ module MasterController #(parameter
     localparam LOAD_K_BUFFER    = 4'b0001;
     localparam LOAD_CONSTANTS   = 4'b0010;
     localparam READ_N_BUFFER    = 4'b0011;
+    localparam CHANGE_READ_BUFF = 4'b0100;
 
     localparam LOAD_LOCAL_N         = 4'b1000;
     localparam LOAD_LOCAL_K         = 4'b1001;
@@ -275,6 +281,7 @@ module MasterController #(parameter
 
 always @(posedge CLK) begin
     case (opcode)
+        CHANGE_READ_BUFF: readBufferSelect = !readBufferSelect;
         LOAD_K_BUFFER: begin
                 nWBuffWrite = 0;
                 case (ins1) // kernel control

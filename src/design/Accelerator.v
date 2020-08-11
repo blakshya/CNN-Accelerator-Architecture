@@ -36,22 +36,26 @@ module Accelerator #(parameter
         // .dataIn(dataIn),
         .dataOut(dataOut),
         .instruction(instruction),
+
         // Kernel Buffer
         .kBuffIn(kerbelBuffIO),
         .kBuffAddress(kernelBuffAddress),
         .kernelDistControl(kernelDistControl),
+
         // Neuron Buffer
+        .readBufferSelect(readBufferSelect),
         .nReadAddress(nReadAddress),
         .nWriteAddress(nWriteAddress),
         .nRWrite(nRWrite),
         .nWWrite(nWWrite),
-
         .nReadIO_In(nReadIO_In), // here output
         .nReadIO_Out(nReadIO_Out),// here input
+
         // Conv Unit
         .convUnitColumnControl(convUnitColumnControl),
         .convUnitRowControl(convUnitRowControl),
         .convUnitCommonControl(convUnitCommonControl),
+        
         // Pooling Unit
         .poolUnitControl(poolUnitControl),
         .doPooling(doPooling)
