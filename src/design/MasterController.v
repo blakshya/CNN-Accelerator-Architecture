@@ -2,11 +2,11 @@
 
 
 module MasterController #(parameter
-        depth = 2,
+        depth = 3,
         D = (1<<depth),
         Ab = 11,
         Al = 7,
-        W = 16,
+        W = 8,
         insW = (2 > depth)? 2: depth,
         insD = (D > W)? D:W,
         insWidth = 4+2+2*insW+insD
@@ -39,13 +39,9 @@ module MasterController #(parameter
         input wire CLK
     );
 
-    initial begin
-        readBufferSelect = 0;
-    end
-
      genvar i;
 //-----------------------------------------------------------------------------
-// Instruction opcodes
+// Instruction opcode
 //-----------------------------------------------------------------------------
     localparam LOAD_N_BUFFER    = 4'b0000;
     localparam LOAD_K_BUFFER    = 4'b0001;
@@ -84,20 +80,22 @@ module MasterController #(parameter
     reg [Al-1:0] nPooledStep;// ins1 = 2'b01, ins2 = 2'b01
 
     always @(posedge CLK) begin
-        if (opcode == LOAD_CONSTANTS) begin
-            case (ins1)
-                2'b00: case (ins2[1:0])
-                    2'b00: Tr = insLast;
-                    2'b01: Tc = insLast;
-                    2'b10: kernelStep = insLast;
-                    2'b11: neuronStep = insLast;
+        case (opcode)
+            LOAD_CONSTANTS: begin
+                case (ins1)
+                    2'b00: case (ins2[1:0])
+                        2'b00: Tr = insLast;
+                        2'b01: Tc = insLast;
+                        2'b10: kernelStep = insLast;
+                        2'b11: neuronStep = insLast;
+                    endcase
+                    2'b01: case (ins2[1:0])
+                        2'b00: P = insLast;
+                        2'b01: nPooledStep = insLast;
+                    endcase
                 endcase
-                2'b01: case (ins2[1:0])
-                    2'b00: P = insLast;
-                    2'b01: nPooledStep = insLast;
-                endcase
-            endcase
-        end
+            end
+        endcase
     end
 
 //-----------------------------------------------------------------------------
@@ -105,7 +103,7 @@ module MasterController #(parameter
 //-----------------------------------------------------------------------------
 
     wire [depth-1:0] Trc; 
-        assign Trc = Tr * Tc;
+        assign Trc = Tr * Tc -1;
     reg [depth-1:0] kernelBuffBankSelect;
         assign kernelDistControl = {Trc,kernelBuffBankSelect};
 
@@ -128,7 +126,7 @@ module MasterController #(parameter
     generate
         for (i = 0; i<D; i=i+1) begin
             assign convUnitLoadNControl[8*(i+1)-1-:8] 
-                        = {{1'b0, HOLD,1'b0},{1'b0,ins3[1:0],1'b1}};
+                        = {{1'b0, HOLD},{1'b0,ins3[1:0]},{1'b0,1'b1}};
         end
     endgenerate
     //-------------------------------------------------------------------------
@@ -139,8 +137,8 @@ module MasterController #(parameter
     generate
         for (i = 0; i<D; i=i+1) begin
             assign convUnitLoadKControl[8*(i+1)-1-:8] 
-                        = {{1'b0,ins3[1:0],loadKWrite[i]},{1'b0,HOLD,1'b0 }};
-        end    
+                        = {{1'b0,ins3[1:0]},{1'b0,HOLD},{loadKWrite[i],1'b0 }};
+        end
         assign loadKWrite = insLast[D-1:0];
     endgenerate
 
@@ -161,7 +159,7 @@ module MasterController #(parameter
             // assign convUnitRowControl[(i+1)*(1)-1 -:1] 
             //                     = {convDivRowSel[i]};
             assign convUnitDivControl[8*(i+1)-1-:8] 
-                                = {2{insLast[i],convUnitDivIns,1'b0}};
+                                = {{2{insLast[i],convUnitDivIns}},{2'b00}};
         end
     endgenerate
 
@@ -175,7 +173,8 @@ module MasterController #(parameter
     //-------------------------------------------------------------------------
     // Convolution
     //-------------------------------------------------------------------------
-    assign convUnitControl = {(D){1'b0,ins1,2'b00,ins2[1:0],1'b0}};
+    // Format per PE {controlSignal,kernelWrite,neuronWrite}
+    assign convUnitControl = {(D){1'b0,ins1,1'b0,ins2[1:0],2'b00}};
     
     always @(posedge CLK) begin
         case (opcode)
@@ -184,7 +183,7 @@ module MasterController #(parameter
             LOAD_LOCAL_K: convUnitColumnControl <= convUnitLoadKControl;
             LOAD_LOCAL_N: convUnitColumnControl <= convUnitLoadNControl;
             default: 
-            convUnitColumnControl <= {(D){8'b00100010}};
+            convUnitColumnControl <= {(D){8'b00100100}};
         endcase
     end
 
@@ -196,10 +195,9 @@ module MasterController #(parameter
     reg [Ab-1:0] nWCol1, nWCol2, nWRow1, nWRow2;
     reg [Ab-1:0] nRCol1, nRCol2, nRRow1, nRRow2;
     reg [Ab-1:0] kCol, kRow;
-    reg [depth-1:0] nBankSel, kBankSel;
+    reg [depth-1:0] nBankSel, kIOBankSel;
     reg nRBuffWrite, nWBuffWrite;
         assign {nRWrite, nWWrite} = {nRBuffWrite, nWBuffWrite};
-
 
     //-------------------------------------------------------------------------
     // Neuron Buffer
@@ -214,16 +212,9 @@ module MasterController #(parameter
         assign nReadIO_In = {nBuffIOSel,nRBuffWrite, nBankSel,nBuffIOData};
 
     always @(posedge CLK) begin
-        if (opcode == LOAD_N_BUFFER) begin
+        if ((opcode == LOAD_N_BUFFER) || (opcode == READ_N_BUFFER)) begin
             nBuffIOSel = 1;
-            nRBuffWrite = 1;
-            nBuffIOData = insLast;
-        end else if (opcode == READ_N_BUFFER) begin
-            nBuffIOSel = 1;
-            nRBuffWrite = 0;
-            nBuffIOData = 0;
         end else begin
-            nRBuffWrite = 0;
             nBuffIOSel = 0;
         end
     end
@@ -235,12 +226,11 @@ module MasterController #(parameter
     reg [W-1:0] kBuffIOData;
     wire kBuffWrite = kBuffIOSel;
     assign kBuffAddress = (kRow)*kernelStep + kCol;
-        assign kBuffIn = {kBuffIOSel,kBuffWrite,kBankSel,kBuffIOData};
+        assign kBuffIn = {kBuffIOSel,kBuffWrite,kIOBankSel,kBuffIOData};
 
     always @(posedge CLK) begin
         if (opcode == LOAD_K_BUFFER) begin
             kBuffIOSel = 1;
-            kBuffIOData = insLast[D-1:0];
         end else begin
             kBuffIOSel = 0;
         end
@@ -263,15 +253,12 @@ module MasterController #(parameter
         end else begin
             doPooling = 0;
         end
-        if (resetPoolReg) begin
-            resetPoolReg = 0;
-        end
     end
 
     generate
         for (i = 0; i<D; i=i+1) begin
             assign poolingControl[(i+1)*4-1 -:4] = resetPoolReg? 4'b1000
-            :{poolWrite[i],poolSelUpper[i],poolSelCurrent[i],poolSelLower[i]};
+            :(doPooling?({poolWrite[i],poolSelUpper[i],poolSelCurrent[i],poolSelLower[i]}):0);
         end
         assign poolUnitControl = poolingControl;
     endgenerate
@@ -281,22 +268,34 @@ module MasterController #(parameter
 //-----------------------------------------------------------------------------
 
 always @(posedge CLK) begin
+    if (resetPoolReg) begin
+            resetPoolReg = 0;
+    end
+
     case (opcode)
-        CHANGE_READ_BUFF: readBufferSelect = !readBufferSelect;
-        LOAD_K_BUFFER: begin
+        CHANGE_READ_BUFF: begin
+                nRBuffWrite = 0;
                 nWBuffWrite = 0;
+                readBufferSelect = !readBufferSelect;
+            end
+        LOAD_K_BUFFER: begin
+                nRBuffWrite = 0;
+                nWBuffWrite = 0;
+                kBuffIOData = insLast[D-1:0];
                 case (ins1) // kernel control
-                    INIT: begin kCol=0; kRow=0; end
-                    INCR: begin kCol=kCol+1; end
-                    JUMP: begin kCol=0;kRow=kRow+1;end
+                    INIT: begin kCol = 0; kRow = 0; end
+                    INCR: begin kCol = kCol+1; end
+                    JUMP: begin kCol = 0; kRow = kRow+1;end
                 endcase
                 case (ins2[1:0]) // kernel bank select control
-                    INIT: begin kBankSel=0; end
-                    INCR: begin kBankSel=kBankSel+1; end
+                    INIT: begin kIOBankSel=0; end
+                    INCR: begin kIOBankSel=kIOBankSel+1; end
                 endcase
             end
         LOAD_N_BUFFER: begin
+                nRBuffWrite = 1;
                 nWBuffWrite = 0;
+                nBuffIOData = insLast;
                 case (ins1) // neuron buffer control
                     INIT: begin nRRow1=0;nRRow2=0;nRCol1=0;nRCol2=0; end
                     INCR: begin nRCol1=nRCol1+1; end
@@ -308,7 +307,9 @@ always @(posedge CLK) begin
                 endcase
             end
         READ_N_BUFFER: begin
+                nRBuffWrite = 0;
                 nWBuffWrite = 0;
+                nBuffIOData = 0;
                 case (ins1) // neuron buffer control
                     INIT: begin nRRow1=0;nRRow2=0;nRCol1=0;nRCol2=0; end
                     INCR: begin nRCol1=nRCol1+1; end
@@ -321,10 +322,11 @@ always @(posedge CLK) begin
             end
         LOAD_LOCAL_K: begin
                 nWBuffWrite = 0;
+                nRBuffWrite = 0;
                 case (ins1) // kernel Buffer Control
-                    INIT: begin kRow=0;kCol=0; end
-                    INCR: begin kCol=kCol+1; end
-                    JUMP: begin kCol=0;kRow=kRow+1; end
+                    INIT: begin kRow = 0; kCol = 0; end
+                    INCR: begin kCol = kCol+1; end
+                    JUMP: begin kCol = 0; kRow = kRow+1; end
                 endcase
                 case (ins2[1:0]) // kernel Distribution bank control
                     INIT: begin kernelBuffBankSelect=0; end
@@ -333,14 +335,24 @@ always @(posedge CLK) begin
             end
         LOAD_LOCAL_N: begin
                 nWBuffWrite = 0;
+                nRBuffWrite = 0;
                 case (ins1)// neuron Buffer Control
-                    INIT: begin kRow=0;kCol=0; end
-                    INCR: begin kCol=kCol+1; end
-                    JUMP: begin kCol=0; kRow=kRow+1; end
+                    INIT: begin nRRow1=0;nRCol1=0; end
+                    INCR: begin nRCol1=nRCol1+1; end
+                    JUMP: begin nRCol1=0; nRRow1 = nRRow1+1; end
                 endcase
             end
+        // DIVIDE_CONV_UNIT: begin
+        //         nRBuffWrite = 0;
+        //         nBuffIOSel = 0;
+        //         kBuffIOSel = 0;
+        //         convUnitColumnControl = convUnitDivControl;
+        //         convDivIniValue = ins2;
+        //         convDivRowSelection = ins3;
+        //     end
         CONVOLVE: begin
-                nWBuffWrite = 1;
+                nWBuffWrite = &(ins3[1:0]);
+                nRBuffWrite = 0;
                 case (ins1) // Effect of kernel control
                     INIT: begin nWRow2=0;nWCol2=0; end
                     INCR: begin nWCol2=nWCol2-1; end
@@ -355,24 +367,81 @@ always @(posedge CLK) begin
         RESET_POOLING_REG: begin
                 nWBuffWrite = 0;
                 resetPoolReg = 1;
+                nRBuffWrite = 0;
             end
         POOL: begin
-                nWBuffWrite = 1;
+                // nWBuffWrite = 1;
+                nRBuffWrite = 0;
                 case (ins3[1:0])
-                    2'b00: begin poolSelLower     = insLast; poolWrite=0; end
-                    2'b10: begin poolSelCurrent   = insLast; poolWrite=0; end
-                    2'b10: begin poolSelUpper     = insLast; poolWrite=0; end
-                    2'b11: poolWrite        = insLast;
+                    2'b00: begin poolSelLower = insLast; poolWrite=0; nWBuffWrite = 0;end
+                    2'b01: begin poolSelCurrent = insLast; poolWrite=0; nWBuffWrite = 0;poolSelLower=0;poolSelUpper=0;end
+                    2'b10: begin poolSelUpper = insLast; poolWrite=0; nWBuffWrite = 0;end
+                    2'b11: begin poolWrite = insLast; nWBuffWrite = 1;end
                 endcase
-                case (ins1)
+                case (ins1) // N Ctrl
                     INIT: begin nRRow1=0; nRCol1=0; nWRow1=0; nWRow2=0;
                                 nWCol1=0; nWCol2=0; end
-                    INCR: begin nRCol1=nRCol1+1; nWCol1=nWCol1+1; end
+                    INCR: begin nRCol1=nRCol1+P; nWCol1=nWCol1+1; end
                     JUMP: begin nRRow1=nRRow1+1; nWRow1=nWRow1+1; nRCol1=0;
                                 nWCol1=0; end
                 endcase
+                case (ins2[1:0]) // P ctrl
+                    INIT: begin nRRow2 = 0; nRCol2 = 0; end
+                    INCR: begin nRCol2 = nRCol2+1; end
+                    JUMP: begin nRRow2 = nRRow2+1; nRCol2 = 0; end
+                endcase
+            end
+        default: begin
+                nRBuffWrite = 0;
+                nWBuffWrite = 0;
+                poolWrite = 0;
             end
     endcase
+end
+
+initial begin
+
+    // convUnitColumnControl=0;
+    readBufferSelect = 0;
+    // doPooling=0;
+    // Tr=0;
+    // Tc=0;
+    // kernelStep = 0;
+    // neuronStep = 0;
+    // P = 0;
+    // nPooledStep = 0;
+    // kernelBuffBankSelect = 0;
+    // convDivIniValue = 0;
+    // convDivRowSelection = 0;
+
+    nWCol1 = 0;
+    nWCol2 = 0;
+    nWRow1 = 0;
+    nWRow2 = 0;
+    nRCol1 = 0;
+    nRCol2 = 0;
+    nRRow1 = 0;
+    nRRow2 = 0;
+    kCol = 0;
+    kRow = 0;
+    // nBankSel = 0;
+    // kIOBankSel = 0;
+    // nRBuffWrite = 0;
+    // nWBuffWrite = 0;
+
+    // nBuffIOSel = 0;
+    // nBuffIOWrite = 0;
+    // nBuffIOData = 0;
+
+    // kBuffIOSel = 0;
+    // kBuffIOData = 0;
+
+    resetPoolReg = 0;
+    // poolSelCurrent = 0;
+    // poolSelLower = 0;
+    // poolSelUpper = 0;
+    // poolWrite = 0;
+
 end
 
 endmodule
