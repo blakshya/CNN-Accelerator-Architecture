@@ -22,7 +22,7 @@ module Accelerator #(parameter
 
     wire [ABuffer-1:0] nReadAddress, nWriteAddress;
     wire [W-1:0] nReadIO_Out;
-    wire [W-1+depth+1 :0] nReadIO_In;
+    wire [W+depth+1 :0] nReadIO_In;
 
     wire [D*8-1:0] convUnitColumnControl;
     wire [D-1:0] convUnitRowControl;
@@ -69,7 +69,7 @@ module Accelerator #(parameter
     wire [W*D-1:0] convUnitNBuffIn;
 
     wire [W-1:0] n1IO_Out, n2IO_Out;
-    wire [W-1+depth+1 :0] n1IO_In, n2IO_In;
+    wire [W+depth+1 :0] n1IO_In, n2IO_In;
 
     wire n1Write, n2Write;
 

@@ -26,7 +26,7 @@ module MasterController #(parameter
         output wire nRWrite,
         output wire nWWrite,
 
-        output wire [W-1+depth+1 :0] nReadIO_In,
+        output wire [W+depth+1 :0] nReadIO_In,
         input wire [W-1:0] nReadIO_Out,
 
         output reg [D*8-1:0] convUnitColumnControl,
@@ -198,6 +198,7 @@ module MasterController #(parameter
     reg [Ab-1:0] kCol, kRow;
     reg [depth-1:0] nBankSel, kBankSel;
     reg nRBuffWrite, nWBuffWrite;
+        assign {nRWrite, nWWrite} = {nRBuffWrite, nWBuffWrite};
 
 
     //-------------------------------------------------------------------------
@@ -209,8 +210,8 @@ module MasterController #(parameter
     assign nWriteAddress = (nWRow1+nWRow2)*nWBufferStep+nWCol1+nWCol2;
     assign nReadAddress = (nRRow1)*nRBufferStep+nRRow2*neuronStep+nRCol1+nRCol2;
     reg nBuffIOSel, nBuffIOWrite;
-    reg [D-1:0] nBuffIOData;
-        assign nReadIO_In = {nBuffIOSel,nBuffIOWrite, nBankSel,nBuffIOData};
+    reg [W-1:0] nBuffIOData;
+        assign nReadIO_In = {nBuffIOSel,nRBuffWrite, nBankSel,nBuffIOData};
 
     always @(posedge CLK) begin
         if (opcode == LOAD_N_BUFFER) begin

@@ -23,15 +23,15 @@ module NeuronBuffer #(parameter
         input wire write,
         input wire [A-1:0] address,
 
-        input wire [W-1+depth+1 :0] ioInputs,
+        input wire [W+depth+1 :0] ioInputs,
         output wire [W-1:0] ioOutputs,
         input wire CLK
     );
     
-    wire ioSelect;
+    wire ioSelect, iow;
     wire [depth-1:0] ioBankSelect;
     wire [W-1:0] ioInput;
-        assign {ioInput,ioBankSelect,ioSelect} = ioInputs;
+        assign {ioSelect,iow,ioBankSelect,ioInput} = ioInputs;
 
     BufferMemory #(.depth(depth),.A(A),.W(W))  buffermemory(
         .ip(ip),
