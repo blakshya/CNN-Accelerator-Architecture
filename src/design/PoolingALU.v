@@ -37,10 +37,10 @@ module PoolingALU #(parameter
 
     wire [W-1:0] max3, sub3;
         assign sub3 = max - max2;
-        assign max3 = sub3[W-1]? max2:max;
+//        assign max3 = sub3[W-1]? max2:max;
 
     always @(negedge CLK) begin
-        max <= write?((useUpper||useCurrent||useLower)?max3:0):max;
+        max <= write?((useUpper||useCurrent||useLower)?(sub3[W-1]? max2:max):0):max;
     end
 
 endmodule

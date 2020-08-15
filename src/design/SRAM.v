@@ -26,9 +26,9 @@ end
 assign dataOutput = memory[address];
 
 integer i;
-// initial begin // this takes a loooooot of time while simulation
-//     for (i=0;1<(1<<A);i=i+1) begin
-//         memory[i] = i;
-//     end
-// end
+initial begin 
+    for (i=0;i<(1<<A);i=i+1) begin
+        memory[i] = 0;
+    end
+end
 endmodule

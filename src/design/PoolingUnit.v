@@ -1,5 +1,12 @@
 `timescale 1ns / 1ps
 
+/*
+ * Connections of use upper and ulse lower are a little counter intuitive
+ * We follow the same convention as used in convolutional unit
+ *      i.e. 0 is the top, D-1 is the bottom
+ *
+ */
+
 module PoolingUnit #(parameter
         depth = 3,
         D = (1<<depth),

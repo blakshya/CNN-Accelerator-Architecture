@@ -58,7 +58,9 @@ module Accelerator #(parameter
         
         // Pooling Unit
         .poolUnitControl(poolUnitControl),
-        .doPooling(doPooling)
+        .doPooling(doPooling),
+
+        .CLK(CLK)
     );
 
     wire [ABuffer-1:0] n1Address, n2Address;
