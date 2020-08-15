@@ -18,7 +18,7 @@ module ConvolutionalUnit #(parameter
 
         input wire [D*8-1:0] columnControl, // controlSignal
         input wire [D-1:0] rowControl, // initSettings
-        input wire [3*depth+2*A-1:0] commonControl, //  peConfig
+        input wire [3*depth+2*A+1-1:0] commonControl, //  peConfig
         input wire CLK
     );
 

@@ -31,7 +31,7 @@ module MasterController #(parameter
 
         output reg [D*8-1:0] convUnitColumnControl,
         output wire [(1)*D-1:0] convUnitRowControl,
-        output wire [3*depth+2*Al-1:0] convUnitCommonControl,
+        output wire [3*depth+2*Al+1-1:0] convUnitCommonControl,
 
         output reg doPooling,
         output wire [D*4-1:0] poolUnitControl,
@@ -152,7 +152,7 @@ module MasterController #(parameter
     wire [1:0] convUnitDivIns = ins1;
     reg [depth-1:0] convDivIniValue;
     reg [depth-1:0] convDivRowSelection;
-        assign convUnitCommonControl = {peConfig,convDivIniValue};
+        assign convUnitCommonControl = {peConfig,convDivIniValue,doPooling};
         
     generate
         assign convDivRowSel = 1<<convDivRowSelection;
