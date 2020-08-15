@@ -32,7 +32,6 @@ module PE #(parameter
     wire [W-1:0] kOut, nOut;
 
     wire [W-1:0] multResult;
-    // reg [W-1:0] temp = 0;
 
     LocalStoreController #(.W(W),.A(A),.depth(depth)) localStoreController(
         .controlSignal(controlSignal),
@@ -63,7 +62,6 @@ module PE #(parameter
     NBitAdder #(.N(W)) adder(
         .ip1(adderIn),
         .ip2(doPooling?0:multResult),
-        // .ip2(temp),
         .op(adderOut)
     );
 
