@@ -26,7 +26,7 @@ module Accelerator #(parameter
 
     wire [D*8-1:0] convUnitColumnControl;
     wire [D-1:0] convUnitRowControl;
-    wire [3*depth+2*ALocal+1-1:0] convUnitCommonControl;
+    wire [3*depth+2*ALocal:0] convUnitCommonControl;
 
     wire doPooling,readBufferSelect,nRWrite,nWWrite;
     wire [D*4-1:0] poolUnitControl;

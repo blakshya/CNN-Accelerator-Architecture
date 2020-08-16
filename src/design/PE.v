@@ -12,7 +12,7 @@ module PE #(parameter
         input wire [W-1:0] adderIn,
         input wire [7:0] columnControl, // same across column
         input wire rowControl, // same across row
-        input wire [3*depth+2*A+1-1:0] commonControl, // same for all PEs
+        input wire [3*depth+2*A:0] commonControl, // same for all PEs
         output wire [W-1:0] adderOut,
         input wire [W-1:0] kernelIn,
         input wire [W-1:0] neuronIn,
@@ -35,6 +35,7 @@ module PE #(parameter
 
     LocalStoreController #(.W(W),.A(A),.depth(depth)) localStoreController(
         .controlSignal(controlSignal),
+        .kernelWrite(kernelWrite),
         .initPESelect(rowControl),
         .initSettings(initSettings),
         .peConfig(peConfig),

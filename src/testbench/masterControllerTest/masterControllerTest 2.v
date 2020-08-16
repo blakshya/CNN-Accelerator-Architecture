@@ -1,45 +1,83 @@
-`timescale 1ns / 1ps
+`timescale 1ns / 1ns
 
-
-module MasterController #(parameter
-        depth = 3,
-        D = (1<<depth),
-        Ab = 11,
-        Al = 7,
-        W = 8,
-        insW = (2 > depth)? 2: depth,
+module masterControllerTest2 ();
+parameter depth = 2;
+parameter D = 1<<depth;
+parameter Al = 7;
+parameter Ab = 11;
+parameter W = 8;
+parameter insW = (2 > depth)? 2: depth,
         insD = (D > W)? D:W,
-        insWidth = 4+2+2*insW+insD
+        insWidth = 4+2+2*insW+insD;
 
-    )(
-        // input wire [W-1:0] dataIn,
-        input wire [insWidth-1:0] instruction,
-        output wire [W-1:0] dataOut,
+`define NULL 0
 
-        output wire [W-1+depth+2 :0] kBuffIn,
-        output wire [Ab-1:0] kBuffAddress,
-        output wire [2*depth-1:0] kernelDistControl,
+reg CLK;
+always begin #1;CLK=!CLK; end
 
-        output reg readBufferSelect,
-        output wire [Ab-1:0] nReadAddress,
-        output wire [Ab-1:0] nWriteAddress,
-        output wire nRWrite,
-        output wire nWWrite,
+integer c_file,c,write_data,w;
 
-        output wire [W+depth+1 :0] nReadIO_In,
-        input wire [W-1:0] nReadIO_Out,
+reg [insWidth-1:0] instruction;
+wire [W-1:0] dataOut;
 
-        output reg [D*8-1:0] convUnitColumnControl,
-        output wire [(1)*D-1:0] convUnitRowControl,
-        output wire [3*depth+2*Al:0] convUnitCommonControl,
+wire [3:0] opcode;
+wire [1:0] ins1;
+wire [insW-1:0] ins2, ins3;
+wire [insD-1:0] insLast;
+    assign {opcode,ins1,ins2,ins3,insLast } = instruction;
 
-        output reg doPooling,
-        output wire [D*4-1:0] poolUnitControl,
+wire [2*depth-1:0] kernelDistControl;
+wire [Ab-1:0] kBuffAddress;
+wire [W-1+depth+2 :0] kBuffIn;
 
-        input wire CLK
-    );
+wire [Ab-1:0] nReadAddress, nWriteAddress;
+reg [W-1:0] nReadIO_Out =0;
+wire [W+depth+1 :0] nReadIO_In;
 
-     genvar i;
+reg [D*8-1:0] convUnitColumnControl;
+wire [D-1:0] convUnitRowControl;
+wire [3*depth+2*Al-1:0] convUnitCommonControl;
+
+reg doPooling,readBufferSelect;
+wire nRWrite,nWWrite;
+wire [D*4-1:0] poolUnitControl;
+
+// MasterController #(.W(W),.depth(depth),.Ab(Ab),.Al(Al)) uut (
+//     // Interface
+//     // .dataIn(dataIn),
+//     .dataOut(dataOut),
+//     .instruction(instruction),
+
+//     // Kernel Buffer
+//     .kBuffIn(kerbelBuffIO),
+//     .kBuffAddress(kernelBuffAddress),
+//     .kernelDistControl(kernelDistControl),
+
+//     // Neuron Buffer
+//     .readBufferSelect(readBufferSelect),
+//     .nReadAddress(nReadAddress),
+//     .nWriteAddress(nWriteAddress),
+//     .nRWrite(nRWrite),
+//     .nWWrite(nWWrite),
+//     .nReadIO_In(nReadIO_In), // here output
+//     .nReadIO_Out(nReadIO_Out),// here input
+
+//     // Conv Unit
+//     .convUnitColumnControl(convUnitColumnControl),
+//     .convUnitRowControl(convUnitRowControl),
+//     .convUnitCommonControl(convUnitCommonControl),
+    
+//     // Pooling Unit
+//     .poolUnitControl(poolUnitControl),
+//     .doPooling(doPooling),
+
+//     .CLK(CLK)
+// );
+
+
+// Copy from masterController ====================================
+//=====================================================================
+    genvar i;
 //-----------------------------------------------------------------------------
 // Instruction opcode
 //-----------------------------------------------------------------------------
@@ -111,13 +149,13 @@ module MasterController #(parameter
 // Convolutional Unit
 //-----------------------------------------------------------------------------
 
-    // wire [2*depth+2*Al-1:0] peConfig;
+    wire [2*depth+2*Al-1:0] peConfig;
     wire [8*D-1:0] convUnitControl;
     wire [D*depth-1:0] initSettings;
     //-------------------------------------------------------------------------
     // Processing Element
     //-------------------------------------------------------------------------
-    // assign peConfig = {Tc,Tr,kernelStep,neuronStep};
+    assign peConfig = {{Tc,Tr,kernelStep},{neuronStep}};
 
     //-------------------------------------------------------------------------
     // Load Local Stores - NEURON
@@ -150,7 +188,7 @@ module MasterController #(parameter
     wire [1:0] convUnitDivIns = ins1;
     reg [depth-1:0] convDivIniValue;
     reg [depth-1:0] convDivRowSelection;
-        assign convUnitCommonControl = {Tc,Tr,kernelStep,neuronStep,convDivIniValue,doPooling};
+        assign convUnitCommonControl = {peConfig,convDivIniValue,doPooling};
         
     generate
         assign convDivRowSel = 1<<convDivRowSelection;
@@ -411,7 +449,7 @@ initial begin
     // P = 0;
     // nPooledStep = 0;
     // kernelBuffBankSelect = 0;
-    convDivIniValue = 0;
+    // convDivIniValue = 0;
     // convDivRowSelection = 0;
 
     nWCol1 = 0;
@@ -442,6 +480,31 @@ initial begin
     // poolSelUpper = 0;
     // poolWrite = 0;
 
+end
+
+// END =====
+initial begin
+    c_file=$fopen("E:/FlexFlow/github-repo/CNN-Accelerator-Architecture/src/testbench/acceleratorTest/instructions.txt","r");
+    if (c_file ==`NULL) begin
+        $display("c_file handle was NULL");
+        $finish;
+    end
+    write_data=$fopen("E:/FlexFlow/github-repo/CNN-Accelerator-Architecture/src/testbench/masterControllerTest/test_result.txt","w");
+    // instruction <= 0;
+    CLK = 1'b0;
+end
+
+always @(posedge CLK) begin
+    if (!$feof(c_file) )begin
+        c=$fscanf(c_file,"%b\n:",instruction);
+        // if (instruction[insWidth-1 -:4] == 4'b0011 ) begin
+        //     $fdisplay(write_data,"%b",{instruction,dataOut});
+        // end
+    end else begin 
+        $fclose(write_data);
+        $fclose(c_file);
+        #2 $finish;
+    end
 end
 
 endmodule

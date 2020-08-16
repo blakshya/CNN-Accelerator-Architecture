@@ -86,9 +86,10 @@ class FlexFowAccelerator:
 
         ins = []
         getInstruction = lambda ins1, ins2, data: self.instruction.format(self.Opcodes.LOAD_CONSTANTS.value,ins1,ins2,self.FSMControl.HOLD,data)
-        ins += [ getInstruction(0,0,self.Tr), getInstruction(0,1,self.Tc), \
+        ins += [ getInstruction(0,0,self.Tr), \
+                getInstruction(0,1,self.Tc), \
                 getInstruction(0,2,self.kernelStep*Tj), \
-                getInstruction(0,3,self.neuronStep), \
+                getInstruction(0,3,self.neuronStep ), \
                 getInstruction(1,0,self.P), \
                 getInstruction(1,1,int(np.ceil((S-K+1)/(P*self.Tc))))]
         return ins
@@ -146,6 +147,7 @@ class FlexFowAccelerator:
         self.neuronDepthPerBank = neuronDepthPerBank
         # Prepare banked feature map
         paddingDimensions = (0,0),(0,neuronRows*Ti-S),(0,neuronStep*Tj-S)
+        # paddingDimensions = (0,0),(0,neuronRows*Ti-S+Ti),(0,neuronStep*Tj-S+Tj)
         featureMap = np.pad(featureMap, paddingDimensions,'constant',constant_values=0)
         bankedFM = np.zeros((D,fmsPerBank,depthPerFMPerBank),dtype=int)
         for n in range(N):
@@ -332,7 +334,8 @@ class FlexFowAccelerator:
             colSel = np.array(['0']*D)
             colSel[rowForTj == j] = '1'
             colSel = (''.join(colSel))[::-1]
-            valueByRow = [int((Tj+x%Tc-j-1)/Tj) for x in range(Tc)]*Tm*Tr+[0]*(D-Tr*Tc*Tm)
+            # valueByRow = [int((Tj+x%Tc-j-1)/Tj) for x in range(Tc)]*Tm*Tr+[0]*(D-Tr*Tc*Tm)
+            valueByRow = [int(tc>j) for tc in range(Tc)]*Tm*Tr+[0]*(D-Tr*Tc*Tm)
             for rowSel in range(D):
                 ins += [getInstruction(ins1,valueByRow[rowSel],rowSel,colSel)]
         # neuron Row offset
@@ -341,7 +344,8 @@ class FlexFowAccelerator:
             colSel = np.array(['0']*D)
             colSel[rowForTi == i] = '1'
             colSel = (''.join(colSel))[::-1]
-            valueByRow = [int((Tc+int(x/Tc)-i-1)/Tc) for x in range(Tc*Tr)]*Tm+[0]*(D-Tr*Tc*Tm)
+            # valueByRow = [int((Tc+int(x/Tc)-i-1)/Tc) for x in range(Tc*Tr)]*Tm+[0]*(D-Tr*Tc*Tm)
+            valueByRow = [int(tr>i) for tr,tc in itr.product(range(Tr),range(Tc))]*Tm+[0]*(D-Tr*Tc*Tm)
             for rowSel in range(D):
                 ins += [getInstruction(ins1,valueByRow[rowSel],rowSel,colSel)]
         # Kernel Col Offset
@@ -350,7 +354,7 @@ class FlexFowAccelerator:
             colSel = np.array(['0']*D)
             colSel[rowForTj == j] = '1'
             colSel = (''.join(colSel))[::-1]
-            valueByRow = [j]*D 
+            valueByRow = [(j-tc)%Tc for tc in range(Tc)]*Tr*Tm +[0]*(D-Tr*Tc*Tm)
             for rowSel in range(D):
                 ins += [getInstruction(ins1,valueByRow[rowSel],rowSel,colSel)]
         # Kernel Row offset
@@ -359,7 +363,7 @@ class FlexFowAccelerator:
             colSel = np.array(['0']*D)
             colSel[rowForTi == i] = '1'
             colSel = (''.join(colSel))[::-1]
-            valueByRow = [i]*D 
+            valueByRow = [(i-tr)%Ti for tr,tc in itr.product(range(Tr),range(Tc))]*Tm+[0]*(D-Tr*Tc*Tm)
             for rowSel in range(D):
                 ins += [getInstruction(ins1,valueByRow[rowSel],rowSel,colSel)]
         return ins
@@ -367,17 +371,17 @@ class FlexFowAccelerator:
     def getInstructions(self, kernel: np.ndarray, featureMap: np.ndarray,P:int):
         ins = []
         ins += self.loadConstants(kernel.shape, featureMap.shape, P)
-        # ins += self.loadKernelBufferInstruction(kernel)
+        ins += self.loadKernelBufferInstruction(kernel)
         # ins += self.loadNeuronBufferInstruction(np.zeros(featureMap.shape, dtype=int))
         # ins += self.readNeuronBufferInstructions()
         # ins += [self.getInstructionString(self.Opcodes.CHANGE_READ_BUFF.value,0,0,0,0) ]
         ins += self.loadNeuronBufferInstruction(featureMap)
         # ins += self.readNeuronBufferInstructions()
-        # ins += self.loadLocalStores(False)
-        # # ins += self.divideConvUnitInstructions()
-        # ins += self.convolutionInstructions()
-        # # ins += [self.getInstructionString(self.Opcodes.CHANGE_READ_BUFF.value,0,0,0,0) ]
-        # # ins += self.readNeuronBufferInstructions()
+        ins += self.loadLocalStores(False)
+        ins += self.divideConvUnitInstructions()
+        ins += self.convolutionInstructions()
+        ins += [self.getInstructionString(self.Opcodes.CHANGE_READ_BUFF.value,0,0,0,0) ]
+        ins += self.readNeuronBufferInstructions()
         ins += self.poolingInstructions()
         ins += [self.getInstructionString(self.Opcodes.CHANGE_READ_BUFF.value,0,0,0,0) ]
         ins += self.readNeuronBufferInstructions()
@@ -385,7 +389,7 @@ class FlexFowAccelerator:
 
 
 depth = 2
-W = 8
+W = 16
 Al = 7
 Ab = 11
 Tr, Tc = 2, 2
@@ -401,12 +405,12 @@ edgeDetectionKernel = np.array([[[[1,2,3],[4,5,6],[7,8,9]]]])
 fmShape = (1,8,8)
 featureMap = np.arange(np.prod(fmShape),dtype=int).reshape(fmShape)
 
-# print(featureMap)
+print(featureMap)
 accelerator = FlexFowAccelerator(depth,W,Al,Ab)
 accelerator.setUnrollingParams(Ti, Tj, Tn, Tr, Tc, Tm)
 
 ins = [0]
-ins = accelerator.getInstructions(edgeDetectionKernel,featureMap, P)
+# ins = accelerator.getInstructions(edgeDetectionKernel,featureMap, P)
 # ins = [0]
 
 for i in ins:

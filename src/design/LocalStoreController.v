@@ -17,6 +17,7 @@ module LocalStoreController #(parameter
         input wire [2*depth+2*A-1:0] peConfig,
         input wire initPESelect,
         input wire [depth-1:0] initSettings,
+        input wire kernelWrite,
         output wire [A-1:0] kernelAddress,
         output wire [A-1:0] neuronAddress,
         input wire CLK
@@ -96,10 +97,10 @@ parameter SET_N_COL_OFST = 3'b111 ;
                     row = 0;
                     col = 0;
                 end
-            // HOLD    : begin
-            //         // row = row;
-            //         col = col;
-            //     end
+            HOLD    : begin
+                    // row = row;
+                    col = col;
+                end
             INCR    : begin
                     // row = row;
                     if (write) begin
@@ -167,10 +168,10 @@ parameter SET_N_COL_OFST = 3'b111 ;
                     row = 0;
                     col = 0;
                 end
-            // HOLD    : begin
-            //         // row = row;
-            //         col = col;
-            //     end
+            HOLD    : begin
+                    // row = row;
+                    col = col;
+                end
             INCR    : begin
                     // row = row;
                     col = col + 1;
